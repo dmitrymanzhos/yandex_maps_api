@@ -10,6 +10,7 @@ class Window:
         self.lat = start_lat
         self.delta = delta
         self.map_file = None
+        self.z = 15
 
     def show_screen(self):
         if not self.map_file:
@@ -30,31 +31,49 @@ class Window:
                 elif event.type == pygame.KEYDOWN:
                     if event.key in [pygame.K_PAGEUP, pygame.K_1]:
                         print('up')
-                        if self.delta < 90:
-                            self.delta += 0.005
+                        if self.z > 0:
+                            self.delta *= 2
+                            self.z -= 1
                             self.get_mapfile()
                             print('0k')
                             screen.blit(pygame.image.load(self.map_file), (0, 0))
 
                     elif event.key in [pygame.K_PAGEDOWN, pygame.K_2]:
-                        print('down')
-                        if 0.0005 < self.delta <= 0.005:
-                            self.delta -= 0.0005
-                        elif 0.005 < self.delta <= 0.05:
-                            self.delta -= 0.002
-                        elif 0.05 < self.delta:
-                            self.delta -= 0.05
-                        else:
-                            break
-                        self.get_mapfile()
-                        print('0k')
-                        screen.blit(pygame.image.load(self.map_file), (0, 0))
+                        if self.z < 17:
+                            print('down')
+                            self.delta /= 2
+                            self.z += 1
+                            self.get_mapfile()
+                            print('0k')
+                            screen.blit(pygame.image.load(self.map_file), (0, 0))
+                    elif event.key == pygame.K_LEFT:
+                        if self.lon - self.delta > -180:
+                            self.lon -= self.delta
+                            self.get_mapfile()
+                            screen.blit(pygame.image.load(self.map_file), (0, 0))
+                    elif event.key == pygame.K_RIGHT:
+                        if self.lon + self.delta < 180:
+                            self.lon += self.delta
+                            self.get_mapfile()
+                            screen.blit(pygame.image.load(self.map_file), (0, 0))
+                    elif event.key == pygame.K_UP:
+                        if self.lat + self.delta < 90:
+                            self.lat += self.delta * 0.432
+                            self.get_mapfile()
+                            screen.blit(pygame.image.load(self.map_file), (0, 0))
+                    elif event.key == pygame.K_DOWN:
+                        if self.lat - self.delta > -90:
+                            self.lat -= self.delta * 0.432
+                            self.get_mapfile()
+                            screen.blit(pygame.image.load(self.map_file), (0, 0))
             pygame.display.flip()
 
     def get_mapfile(self):
         map_params = {
             'll': ','.join([str(self.lon), str(self.lat)]),
-            'spn': ','.join([str(self.delta), str(self.delta)]),
+            # 'spn': ','.join([str(self.delta), str(self.delta)]),
+            'z': str(self.z),
+            'size': '600,450',
             'l': 'map'}
 
         map_server = "http://static-maps.yandex.ru/1.x/"
@@ -66,6 +85,8 @@ class Window:
         with open(map_file, "wb") as file:
             file.write(response.content)
 
+        self.top = 0
+        self.left = 0
         self.map_file = map_file
 
     def find(self, find_data):
@@ -84,11 +105,11 @@ class Window:
         first_data = json_response["response"]["GeoObjectCollection"]["featureMember"][0]["GeoObject"]
 
         center_data = first_data["Point"]["pos"]
-        self.lon, self.lat = center_data.split(" ")
-        self.delta = 0.005
+        self.lon, self.lat = (float(el) for el in center_data.split(" "))
+        self.delta = 0.0258
 
 
 window = Window(start_lon=0, start_lat=0, delta=0.05)
-window.find('Москва')
+window.find('Уфа')
 window.get_mapfile()
 window.show_screen()
